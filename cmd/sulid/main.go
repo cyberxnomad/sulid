@@ -2,13 +2,13 @@ package main
 
 import (
 	cryptorand "crypto/rand"
+	"flag"
 	"fmt"
 	mathrand "math/rand"
 	"os"
 	"strings"
 	"time"
 
-	getopt "github.com/pborman/getopt/v2"
 	"github.com/xray-bit/sulid"
 )
 
@@ -17,30 +17,26 @@ const (
 	rfc3339ms = "2006-01-02T15:04:05.000Z07:00"
 )
 
-func main() {
-	// Completely obnoxious.
-	getopt.HelpColumn = 50
-	getopt.DisplayWidth = 140
+var (
+	formatFlag string
+	localFlag  bool
+	quickFlag  bool
+	zeroFlag   bool
+)
 
-	fs := getopt.New()
-	var (
-		format = fs.StringLong("format", 'f', "default", "when parsing, show times in this format: default, rfc3339, unix, ms", "<format>")
-		local  = fs.BoolLong("local", 'l', "when parsing, show local time instead of UTC")
-		quick  = fs.BoolLong("quick", 'q', "when generating, use non-crypto-grade entropy")
-		zero   = fs.BoolLong("zero", 'z', "when generating, fix entropy to all-zeroes")
-		help   = fs.BoolLong("help", 'h', "print this help text")
-	)
-	if err := fs.Getopt(os.Args, nil); err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-	if *help {
-		fs.PrintUsage(os.Stderr)
-		os.Exit(0)
-	}
+func init() {
+	flag.StringVar(&formatFlag, "f", "default", "when parsing, show times in this format: default, rfc3339, unix, ms")
+	flag.BoolVar(&localFlag, "l", false, "when parsing, show local time instead of UTC")
+	flag.BoolVar(&quickFlag, "q", false, "when generating, use non-crypto-grade entropy")
+	flag.BoolVar(&zeroFlag, "z", false, "when generating, fix entropy to all-zeroes")
+}
+
+func main() {
+	flag.Parse()
+	args := flag.Args()
 
 	var formatFunc func(time.Time) string
-	switch strings.ToLower(*format) {
+	switch strings.ToLower(formatFlag) {
 	case "default":
 		formatFunc = func(t time.Time) string { return t.Format(defaultms) }
 	case "rfc3339":
@@ -50,15 +46,15 @@ func main() {
 	case "ms":
 		formatFunc = func(t time.Time) string { return fmt.Sprint(t.UnixNano() / 1e6) }
 	default:
-		fmt.Fprintf(os.Stderr, "invalid --format %s\n", *format)
+		fmt.Fprintf(os.Stderr, "invalid -f %s\n", formatFlag)
 		os.Exit(1)
 	}
 
-	switch args := fs.Args(); len(args) {
+	switch len(args) {
 	case 0:
-		generate(*quick, *zero)
+		generate(quickFlag, zeroFlag)
 	default:
-		parse(args[0], *local, formatFunc)
+		parse(args[0], localFlag, formatFunc)
 	}
 }
 
