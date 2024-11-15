@@ -538,7 +538,7 @@ func (id SULID) Value() (driver.Value, error) {
 // increment results in entropy that would overflow available space,
 // MonotonicRead returns ErrMonotonicOverflow.
 //
-// Passing `inc == 0` results in the reasonable default `math.MaxUint32`. Lower
+// Passing `inc == 0` results in the reasonable default `math.MaxUint16`. Lower
 // values of `inc` provide more monotonic entropy in a single millisecond, at
 // the cost of easier "guessability" of generated SULIDs. If your code depends on
 // SULIDs having secure entropy bytes, then it's recommended to use the secure
