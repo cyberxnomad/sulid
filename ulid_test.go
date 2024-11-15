@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ulid_test
+package sulid_test
 
 import (
 	"bytes"
@@ -26,21 +26,21 @@ import (
 	"testing/quick"
 	"time"
 
-	"github.com/oklog/ulid/v2"
+	"github.com/xray-bit/sulid"
 )
 
-func ExampleULID() {
+func ExampleSULID() {
 	t := time.Unix(1000000, 0)
-	entropy := ulid.Monotonic(rand.New(rand.NewSource(t.UnixNano())), 0)
-	fmt.Println(ulid.MustNew(ulid.Timestamp(t), entropy))
-	// Output: 0000XSNJG0MQJHBF4QX1EFD6Y3
+	entropy := sulid.Monotonic(rand.New(rand.NewSource(t.UnixNano())), 0)
+	fmt.Println(sulid.MustNew(sulid.Timestamp(t), entropy))
+	// Output: 0000XSNJG055WMAVS5Z8
 }
 
 func TestNew(t *testing.T) {
 	t.Parallel()
 
-	t.Run("ULID", testULID(func(ms uint64, e io.Reader) ulid.ULID {
-		id, err := ulid.New(ms, e)
+	t.Run("SULID", testSULID(func(ms uint64, e io.Reader) sulid.SULID {
+		id, err := sulid.New(ms, e)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -48,12 +48,12 @@ func TestNew(t *testing.T) {
 	}))
 
 	t.Run("Error", func(t *testing.T) {
-		_, err := ulid.New(ulid.MaxTime()+1, nil)
-		if got, want := err, ulid.ErrBigTime; got != want {
+		_, err := sulid.New(sulid.MaxTime()+1, nil)
+		if got, want := err, sulid.ErrBigTime; got != want {
 			t.Errorf("got err %v, want %v", got, want)
 		}
 
-		_, err = ulid.New(0, strings.NewReader(""))
+		_, err = sulid.New(0, strings.NewReader(""))
 		if got, want := err, io.EOF; got != want {
 			t.Errorf("got err %v, want %v", got, want)
 		}
@@ -62,8 +62,8 @@ func TestNew(t *testing.T) {
 
 func TestMake(t *testing.T) {
 	t.Parallel()
-	id := ulid.Make()
-	rt, err := ulid.Parse(id.String())
+	id := sulid.Make()
+	rt, err := sulid.Parse(id.String())
 	if err != nil {
 		t.Fatalf("parse %q: %v", id.String(), err)
 	}
@@ -75,7 +75,7 @@ func TestMake(t *testing.T) {
 func TestMustNew(t *testing.T) {
 	t.Parallel()
 
-	t.Run("ULID", testULID(ulid.MustNew))
+	t.Run("SULID", testSULID(sulid.MustNew))
 
 	t.Run("Panic", func(t *testing.T) {
 		defer func() {
@@ -83,16 +83,16 @@ func TestMustNew(t *testing.T) {
 				t.Errorf("panic with err %v, want %v", got, want)
 			}
 		}()
-		_ = ulid.MustNew(0, strings.NewReader(""))
+		_ = sulid.MustNew(0, strings.NewReader(""))
 	})
 }
 
 func TestMustNewDefault(t *testing.T) {
 	t.Parallel()
 
-	t.Run("ULID", func(t *testing.T) {
-		id := ulid.MustNewDefault(time.Now())
-		rt, err := ulid.Parse(id.String())
+	t.Run("SULID", func(t *testing.T) {
+		id := sulid.MustNewDefault(time.Now())
+		rt, err := sulid.Parse(id.String())
 		if err != nil {
 			t.Fatalf("parse %q: %v", id.String(), err)
 		}
@@ -103,11 +103,11 @@ func TestMustNewDefault(t *testing.T) {
 
 	t.Run("Panic", func(t *testing.T) {
 		defer func() {
-			if got, want := recover(), ulid.ErrBigTime; got != want {
+			if got, want := recover(), sulid.ErrBigTime; got != want {
 				t.Errorf("got panic %v, want %v", got, want)
 			}
 		}()
-		_ = ulid.MustNewDefault(time.Time{})
+		_ = sulid.MustNewDefault(time.Time{})
 	})
 }
 
@@ -116,14 +116,14 @@ func TestMustParse(t *testing.T) {
 
 	for _, tc := range []struct {
 		name string
-		fn   func(string) ulid.ULID
+		fn   func(string) sulid.SULID
 	}{
-		{"MustParse", ulid.MustParse},
-		{"MustParseStrict", ulid.MustParseStrict},
+		{"MustParse", sulid.MustParse},
+		{"MustParseStrict", sulid.MustParseStrict},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
-				if got, want := recover(), ulid.ErrDataSize; got != want {
+				if got, want := recover(), sulid.ErrDataSize; got != want {
 					t.Errorf("got panic %v, want %v", got, want)
 				}
 			}()
@@ -133,9 +133,9 @@ func TestMustParse(t *testing.T) {
 	}
 }
 
-func testULID(mk func(uint64, io.Reader) ulid.ULID) func(*testing.T) {
+func testSULID(mk func(uint64, io.Reader) sulid.SULID) func(*testing.T) {
 	return func(t *testing.T) {
-		want := ulid.ULID{0x0, 0x0, 0x0, 0x1, 0x86, 0xa0}
+		want := sulid.SULID{0x0, 0x0, 0x0, 0x1, 0x86, 0xa0}
 		if got := mk(1e5, nil); got != want { // optional entropy
 			t.Errorf("\ngot  %#v\nwant %#v", got, want)
 		}
@@ -151,7 +151,7 @@ func testULID(mk func(uint64, io.Reader) ulid.ULID) func(*testing.T) {
 func TestRoundTrips(t *testing.T) {
 	t.Parallel()
 
-	prop := func(id ulid.ULID) bool {
+	prop := func(id sulid.SULID) bool {
 		bin, err := id.MarshalBinary()
 		if err != nil {
 			t.Fatal(err)
@@ -162,22 +162,22 @@ func TestRoundTrips(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		var a ulid.ULID
+		var a sulid.SULID
 		if err = a.UnmarshalBinary(bin); err != nil {
 			t.Fatal(err)
 		}
 
-		var b ulid.ULID
+		var b sulid.SULID
 		if err = b.UnmarshalText(txt); err != nil {
 			t.Fatal(err)
 		}
 
 		return id == a && b == id &&
-			id == ulid.MustParse(id.String()) &&
-			id == ulid.MustParseStrict(id.String())
+			id == sulid.MustParse(id.String()) &&
+			id == sulid.MustParseStrict(id.String())
 	}
 
-	err := quick.Check(prop, &quick.Config{MaxCount: 1e5})
+	err := quick.Check(prop, &quick.Config{MaxCount: 1e7})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,16 +186,16 @@ func TestRoundTrips(t *testing.T) {
 func TestMarshalingErrors(t *testing.T) {
 	t.Parallel()
 
-	var id ulid.ULID
+	var id sulid.SULID
 	for _, tc := range []struct {
 		name string
 		fn   func([]byte) error
 		err  error
 	}{
-		{"UnmarshalBinary", id.UnmarshalBinary, ulid.ErrDataSize},
-		{"UnmarshalText", id.UnmarshalText, ulid.ErrDataSize},
-		{"MarshalBinaryTo", id.MarshalBinaryTo, ulid.ErrBufferSize},
-		{"MarshalTextTo", id.MarshalTextTo, ulid.ErrBufferSize},
+		{"UnmarshalBinary", id.UnmarshalBinary, sulid.ErrDataSize},
+		{"UnmarshalText", id.UnmarshalText, sulid.ErrDataSize},
+		{"MarshalBinaryTo", id.MarshalBinaryTo, sulid.ErrBufferSize},
+		{"MarshalTextTo", id.MarshalTextTo, sulid.ErrBufferSize},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if got, want := tc.fn([]byte{}), tc.err; got != want {
@@ -214,8 +214,8 @@ func TestParseStrictInvalidCharacters(t *testing.T) {
 		input string
 	}
 	testCases := []testCase{}
-	base := "0000XSNJG0MQJHBF4QX1EFD6Y3"
-	for i := 0; i < ulid.EncodedSize; i++ {
+	base := "0000XSNJG055WMAVS5Z8"
+	for i := 0; i < sulid.EncodedSize; i++ {
 		testCases = append(testCases, testCase{
 			name:  fmt.Sprintf("Invalid 0xFF at index %d", i),
 			input: base[:i] + "\xff" + base[i+1:],
@@ -228,9 +228,9 @@ func TestParseStrictInvalidCharacters(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := ulid.ParseStrict(tt.input)
-			if err != ulid.ErrInvalidCharacters {
-				t.Errorf("Parse(%q): got err %v, want %v", tt.input, err, ulid.ErrInvalidCharacters)
+			_, err := sulid.ParseStrict(tt.input)
+			if err != sulid.ErrInvalidCharacters {
+				t.Errorf("Parse(%q): got err %v, want %v", tt.input, err, sulid.ErrInvalidCharacters)
 			}
 		})
 	}
@@ -240,8 +240,8 @@ func TestAlizainCompatibility(t *testing.T) {
 	t.Parallel()
 
 	ts := uint64(1469918176385)
-	got := ulid.MustNew(ts, bytes.NewReader(make([]byte, 16)))
-	want := ulid.MustParse("01ARYZ6S410000000000000000")
+	got := sulid.MustNew(ts, bytes.NewReader(make([]byte, 16)))
+	want := sulid.MustParse("01ARYZ6S410000000000")
 	if got != want {
 		t.Fatalf("with time=%d, got %q, want %q", ts, got, want)
 	}
@@ -250,12 +250,12 @@ func TestAlizainCompatibility(t *testing.T) {
 func TestEncoding(t *testing.T) {
 	t.Parallel()
 
-	enc := make(map[rune]bool, len(ulid.Encoding))
-	for _, r := range ulid.Encoding {
+	enc := make(map[rune]bool, len(sulid.Encoding))
+	for _, r := range sulid.Encoding {
 		enc[r] = true
 	}
 
-	prop := func(id ulid.ULID) bool {
+	prop := func(id sulid.SULID) bool {
 		for _, r := range id.String() {
 			if !enc[r] {
 				return false
@@ -272,7 +272,7 @@ func TestEncoding(t *testing.T) {
 func TestLexicographicalOrder(t *testing.T) {
 	t.Parallel()
 
-	prop := func(a, b ulid.ULID) bool {
+	prop := func(a, b sulid.SULID) bool {
 		t1, t2 := a.Time(), b.Time()
 		s1, s2 := a.String(), b.String()
 		ord := bytes.Compare(a[:], b[:])
@@ -281,9 +281,9 @@ func TestLexicographicalOrder(t *testing.T) {
 			(t1 < t2 && s1 < s2 && ord == -1)
 	}
 
-	top := ulid.MustNew(ulid.MaxTime(), nil)
+	top := sulid.MustNew(sulid.MaxTime(), nil)
 	for i := 0; i < 10; i++ { // test upper boundary state space
-		next := ulid.MustNew(top.Time()-1, nil)
+		next := sulid.MustNew(top.Time()-1, nil)
 		if !prop(top, next) {
 			t.Fatalf("bad lexicographical order: (%v, %q) > (%v, %q) == false",
 				top.Time(), top,
@@ -293,7 +293,7 @@ func TestLexicographicalOrder(t *testing.T) {
 		top = next
 	}
 
-	if err := quick.Check(prop, &quick.Config{MaxCount: 1e6}); err != nil {
+	if err := quick.Check(prop, &quick.Config{MaxCount: 1e7}); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -301,12 +301,12 @@ func TestLexicographicalOrder(t *testing.T) {
 func TestCaseInsensitivity(t *testing.T) {
 	t.Parallel()
 
-	upper := func(id ulid.ULID) (out ulid.ULID) {
-		return ulid.MustParse(strings.ToUpper(id.String()))
+	upper := func(id sulid.SULID) (out sulid.SULID) {
+		return sulid.MustParse(strings.ToUpper(id.String()))
 	}
 
-	lower := func(id ulid.ULID) (out ulid.ULID) {
-		return ulid.MustParse(strings.ToLower(id.String()))
+	lower := func(id sulid.SULID) (out sulid.SULID) {
+		return sulid.MustParse(strings.ToLower(id.String()))
 	}
 
 	err := quick.CheckEqual(upper, lower, nil)
@@ -320,16 +320,16 @@ func TestParseRobustness(t *testing.T) {
 
 	cases := [][]byte{
 		{0x1, 0xc0, 0x73, 0x62, 0x4a, 0xaf, 0x39, 0x78, 0x51, 0x4e, 0xf8, 0x44, 0x3b,
-			0xb2, 0xa8, 0x59, 0xc7, 0x5f, 0xc3, 0xcc, 0x6a, 0xf2, 0x6d, 0x5a, 0xaa, 0x20},
+			0xb2, 0xa8, 0x59, 0xc7, 0x5f, 0xc3, 0xcc},
 	}
 
 	for _, tc := range cases {
-		if _, err := ulid.Parse(string(tc)); err != nil {
+		if _, err := sulid.Parse(string(tc)); err != nil {
 			t.Error(err)
 		}
 	}
 
-	prop := func(s [26]byte) (ok bool) {
+	prop := func(s [20]byte) (ok bool) {
 		defer func() {
 			if err := recover(); err != nil {
 				t.Error(err)
@@ -344,7 +344,7 @@ func TestParseRobustness(t *testing.T) {
 		}
 
 		var err error
-		if _, err = ulid.Parse(string(s[:])); err != nil {
+		if _, err = sulid.Parse(string(s[:])); err != nil {
 			t.Error(err)
 		}
 
@@ -360,8 +360,8 @@ func TestParseRobustness(t *testing.T) {
 func TestNow(t *testing.T) {
 	t.Parallel()
 
-	before := ulid.Now()
-	after := ulid.Timestamp(time.Now().UTC().Add(time.Millisecond))
+	before := sulid.Now()
+	after := sulid.Timestamp(time.Now().UTC().Add(time.Millisecond))
 
 	if before >= after {
 		t.Fatalf("clock went mad: before %v, after %v", before, after)
@@ -372,13 +372,13 @@ func TestTimestamp(t *testing.T) {
 	t.Parallel()
 
 	tm := time.Unix(1, 1000) // will be truncated
-	if got, want := ulid.Timestamp(tm), uint64(1000); got != want {
+	if got, want := sulid.Timestamp(tm), uint64(1000); got != want {
 		t.Errorf("for %v, got %v, want %v", tm, got, want)
 	}
 
-	mt := ulid.MaxTime()
+	mt := sulid.MaxTime()
 	dt := time.Unix(int64(mt/1000), int64((mt%1000)*1000000)).Truncate(time.Millisecond)
-	ts := ulid.Timestamp(dt)
+	ts := sulid.Timestamp(dt)
 	if got, want := ts, mt; got != want {
 		t.Errorf("got timestamp %d, want %d", got, want)
 	}
@@ -388,7 +388,7 @@ func TestTime(t *testing.T) {
 	t.Parallel()
 
 	original := time.Now()
-	diff := original.Sub(ulid.Time(ulid.Timestamp(original)))
+	diff := original.Sub(sulid.Time(sulid.Timestamp(original)))
 	if diff >= time.Millisecond {
 		t.Errorf("difference between original and recovered time (%d) greater"+
 			"than a millisecond", diff)
@@ -399,22 +399,22 @@ func TestTimestampRoundTrips(t *testing.T) {
 	t.Parallel()
 
 	prop := func(ts uint64) bool {
-		return ts == ulid.Timestamp(ulid.Time(ts))
+		return ts == sulid.Timestamp(sulid.Time(ts))
 	}
 
-	err := quick.Check(prop, &quick.Config{MaxCount: 1e5})
+	err := quick.Check(prop, &quick.Config{MaxCount: 1e6})
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
-func TestULIDTime(t *testing.T) {
+func TestSULIDTime(t *testing.T) {
 	t.Parallel()
 
-	maxTime := ulid.MaxTime()
+	maxTime := sulid.MaxTime()
 
-	var id ulid.ULID
-	if got, want := id.SetTime(maxTime+1), ulid.ErrBigTime; got != want {
+	var id sulid.SULID
+	if got, want := id.SetTime(maxTime+1), sulid.ErrBigTime; got != want {
 		t.Errorf("got err %v, want %v", got, want)
 	}
 
@@ -422,7 +422,7 @@ func TestULIDTime(t *testing.T) {
 	for i := 0; i < 1e6; i++ {
 		ms := uint64(rng.Int63n(int64(maxTime)))
 
-		var id ulid.ULID
+		var id sulid.SULID
 		if err := id.SetTime(ms); err != nil {
 			t.Fatal(err)
 		}
@@ -433,21 +433,21 @@ func TestULIDTime(t *testing.T) {
 	}
 }
 
-func TestULIDTimestamp(t *testing.T) {
+func TestSULIDTimestamp(t *testing.T) {
 	t.Parallel()
 
 	{
-		id := ulid.Make()
+		id := sulid.Make()
 		ts := id.Timestamp()
-		tt := ulid.Time(id.Time())
+		tt := sulid.Time(id.Time())
 		if ts != tt {
-			t.Errorf("id.Timestamp() %s != ulid.Time(id.Time()) %s", ts, tt)
+			t.Errorf("id.Timestamp() %s != sulid.Time(id.Time()) %s", ts, tt)
 		}
 	}
 
 	{
 		now := time.Now()
-		id := ulid.MustNew(ulid.Timestamp(now), ulid.DefaultEntropy())
+		id := sulid.MustNew(sulid.Timestamp(now), sulid.DefaultEntropy())
 		if want, have := now.Truncate(time.Millisecond), id.Timestamp(); want != have {
 			t.Errorf("Timestamp: want %v, have %v", want, have)
 		}
@@ -457,27 +457,27 @@ func TestULIDTimestamp(t *testing.T) {
 func TestZero(t *testing.T) {
 	t.Parallel()
 
-	var id ulid.ULID
+	var id sulid.SULID
 	if ok := id.IsZero(); !ok {
-		t.Error(".IsZero: must return true for zero-value ULIDs, have false")
+		t.Error(".IsZero: must return true for zero-value SULIDs, have false")
 	}
 
-	id = ulid.MustNew(ulid.Now(), ulid.DefaultEntropy())
+	id = sulid.MustNew(sulid.Now(), sulid.DefaultEntropy())
 	if ok := id.IsZero(); ok {
-		t.Error(".IsZero: must return false for non-zero-value ULIDs, have true")
+		t.Error(".IsZero: must return false for non-zero-value SULIDs, have true")
 	}
 }
 
 func TestEntropy(t *testing.T) {
 	t.Parallel()
 
-	var id ulid.ULID
-	if got, want := id.SetEntropy([]byte{}), ulid.ErrDataSize; got != want {
+	var id sulid.SULID
+	if got, want := id.SetEntropy([]byte{}), sulid.ErrDataSize; got != want {
 		t.Errorf("got err %v, want %v", got, want)
 	}
 
-	prop := func(e [10]byte) bool {
-		var id ulid.ULID
+	prop := func(e [6]byte) bool {
+		var id sulid.SULID
 		if err := id.SetEntropy(e[:]); err != nil {
 			t.Fatalf("got err %v", err)
 		}
@@ -499,10 +499,10 @@ func TestEntropy(t *testing.T) {
 func TestEntropyRead(t *testing.T) {
 	t.Parallel()
 
-	prop := func(e [10]byte) bool {
+	prop := func(e [6]byte) bool {
 		flakyReader := iotest.HalfReader(bytes.NewReader(e[:]))
 
-		id, err := ulid.New(ulid.Now(), flakyReader)
+		id, err := sulid.New(sulid.Now(), flakyReader)
 		if err != nil {
 			t.Fatalf("got err %v", err)
 		}
@@ -524,11 +524,11 @@ func TestEntropyRead(t *testing.T) {
 func TestCompare(t *testing.T) {
 	t.Parallel()
 
-	a := func(a, b ulid.ULID) int {
+	a := func(a, b sulid.SULID) int {
 		return strings.Compare(a.String(), b.String())
 	}
 
-	b := func(a, b ulid.ULID) int {
+	b := func(a, b sulid.SULID) int {
 		return a.Compare(b)
 	}
 
@@ -542,41 +542,41 @@ func TestOverflowHandling(t *testing.T) {
 	t.Parallel()
 
 	for s, want := range map[string]error{
-		"00000000000000000000000000": nil,
-		"70000000000000000000000000": nil,
-		"7ZZZZZZZZZZZZZZZZZZZZZZZZZ": nil,
-		"80000000000000000000000000": ulid.ErrOverflow,
-		"80000000000000000000000001": ulid.ErrOverflow,
-		"ZZZZZZZZZZZZZZZZZZZZZZZZZZ": ulid.ErrOverflow,
+		"00000000000000000000": nil,
+		"70000000000000000000": nil,
+		"7ZZZZZZZZZZZZZZZZZZZ": nil,
+		"80000000000000000000": sulid.ErrOverflow,
+		"80000000000000000001": sulid.ErrOverflow,
+		"ZZZZZZZZZZZZZZZZZZZZ": sulid.ErrOverflow,
 	} {
-		if _, have := ulid.Parse(s); want != have {
+		if _, have := sulid.Parse(s); want != have {
 			t.Errorf("%s: want error %v, have %v", s, want, have)
 		}
 	}
 }
 
 func TestScan(t *testing.T) {
-	id := ulid.MustNew(123, crand.Reader)
+	id := sulid.MustNew(123, crand.Reader)
 
 	for _, tc := range []struct {
 		name string
 		in   interface{}
-		out  ulid.ULID
+		out  sulid.SULID
 		err  error
 	}{
 		{"string", id.String(), id, nil},
 		{"bytes", id[:], id, nil},
-		{"nil", nil, ulid.ULID{}, nil},
-		{"other", 44, ulid.ULID{}, ulid.ErrScanValue},
+		{"nil", nil, sulid.SULID{}, nil},
+		{"other", 44, sulid.SULID{}, sulid.ErrScanValue},
 	} {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			var out ulid.ULID
+			var out sulid.SULID
 			err := out.Scan(tc.in)
 			if got, want := out, tc.out; got.Compare(want) != 0 {
-				t.Errorf("got ULID %s, want %s", got, want)
+				t.Errorf("got SULID %s, want %s", got, want)
 			}
 
 			if got, want := fmt.Sprint(err), fmt.Sprint(tc.err); got != want {
@@ -587,7 +587,7 @@ func TestScan(t *testing.T) {
 }
 
 func TestMonotonic(t *testing.T) {
-	now := ulid.Now()
+	now := sulid.Now()
 	for _, e := range []struct {
 		name string
 		mk   func() io.Reader
@@ -595,23 +595,22 @@ func TestMonotonic(t *testing.T) {
 		{"cryptorand", func() io.Reader { return crand.Reader }},
 		{"mathrand", func() io.Reader { return rand.New(rand.NewSource(int64(now))) }},
 	} {
-		for _, inc := range []uint64{
+		for _, inc := range []uint32{
 			0,
 			1,
 			2,
 			math.MaxUint8 + 1,
 			math.MaxUint16 + 1,
-			math.MaxUint32 + 1,
 		} {
 			inc := inc
-			entropy := ulid.Monotonic(e.mk(), uint64(inc))
+			entropy := sulid.Monotonic(e.mk(), inc)
 
 			t.Run(fmt.Sprintf("entropy=%s/inc=%d", e.name, inc), func(t *testing.T) {
 				t.Parallel()
 
-				var prev ulid.ULID
+				var prev sulid.SULID
 				for i := 0; i < 10000; i++ {
-					next, err := ulid.New(123, entropy)
+					next, err := sulid.New(123, entropy)
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -631,22 +630,22 @@ func TestMonotonic(t *testing.T) {
 func TestMonotonicOverflow(t *testing.T) {
 	t.Parallel()
 
-	entropy := ulid.Monotonic(
+	entropy := sulid.Monotonic(
 		io.MultiReader(
-			bytes.NewReader(bytes.Repeat([]byte{0xFF}, 10)), // Entropy for first ULID
+			bytes.NewReader(bytes.Repeat([]byte{0xFF}, 10)), // Entropy for first SULID
 			crand.Reader, // Following random entropy
 		),
 		0,
 	)
 
-	prev, err := ulid.New(0, entropy)
+	prev, err := sulid.New(0, entropy)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	next, err := ulid.New(prev.Time(), entropy)
-	if have, want := err, ulid.ErrMonotonicOverflow; have != want {
-		t.Errorf("have ulid: %v %v err: %v, want err: %v",
+	next, err := sulid.New(prev.Time(), entropy)
+	if have, want := err, sulid.ErrMonotonicOverflow; have != want {
+		t.Errorf("have sulid: %v %v err: %v, want err: %v",
 			next.Time(), next.Entropy(), have, want)
 	}
 }
@@ -656,17 +655,17 @@ func TestMonotonicSafe(t *testing.T) {
 
 	var (
 		rng  = rand.New(rand.NewSource(time.Now().UnixNano()))
-		safe = &ulid.LockedMonotonicReader{MonotonicReader: ulid.Monotonic(rng, 0)}
-		t0   = ulid.Timestamp(time.Now())
+		safe = &sulid.LockedMonotonicReader{MonotonicReader: sulid.Monotonic(rng, 0)}
+		t0   = sulid.Timestamp(time.Now())
 	)
 
 	errs := make(chan error, 100)
 	for i := 0; i < cap(errs); i++ {
 		go func() {
-			u0 := ulid.MustNew(t0, safe)
+			u0 := sulid.MustNew(t0, safe)
 			u1 := u0
 			for j := 0; j < 1024; j++ {
-				u0, u1 = u1, ulid.MustNew(t0, safe)
+				u0, u1 = u1, sulid.MustNew(t0, safe)
 				if u0.String() >= u1.String() {
 					errs <- fmt.Errorf(
 						"%s (%d %x) >= %s (%d %x)",
@@ -687,32 +686,32 @@ func TestMonotonicSafe(t *testing.T) {
 	}
 }
 
-func TestULID_Bytes(t *testing.T) {
+func TestSULID_Bytes(t *testing.T) {
 	tt := time.Unix(1000000, 0)
-	entropy := ulid.Monotonic(rand.New(rand.NewSource(tt.UnixNano())), 0)
-	id := ulid.MustNew(ulid.Timestamp(tt), entropy)
+	entropy := sulid.Monotonic(rand.New(rand.NewSource(tt.UnixNano())), 0)
+	id := sulid.MustNew(sulid.Timestamp(tt), entropy)
 	bid := id.Bytes()
 	bid[len(bid)-1]++
 	if bytes.Equal(id.Bytes(), bid) {
-		t.Error("Bytes() returned a reference to ulid underlying array!")
+		t.Error("Bytes() returned a reference to sulid underlying array!")
 	}
 }
 
 func BenchmarkNew(b *testing.B) {
-	benchmarkMakeULID(b, func(timestamp uint64, entropy io.Reader) {
-		_, _ = ulid.New(timestamp, entropy)
+	benchmarkMakeSULID(b, func(timestamp uint64, entropy io.Reader) {
+		_, _ = sulid.New(timestamp, entropy)
 	})
 }
 
 func BenchmarkMustNew(b *testing.B) {
-	benchmarkMakeULID(b, func(timestamp uint64, entropy io.Reader) {
-		_ = ulid.MustNew(timestamp, entropy)
+	benchmarkMakeSULID(b, func(timestamp uint64, entropy io.Reader) {
+		_ = sulid.MustNew(timestamp, entropy)
 	})
 }
 
-func benchmarkMakeULID(b *testing.B, f func(uint64, io.Reader)) {
+func benchmarkMakeSULID(b *testing.B, f func(uint64, io.Reader)) {
 	b.ReportAllocs()
-	b.SetBytes(int64(len(ulid.ULID{})))
+	b.SetBytes(int64(len(sulid.SULID{})))
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
@@ -723,12 +722,12 @@ func benchmarkMakeULID(b *testing.B, f func(uint64, io.Reader)) {
 	}{
 		{"WithCrypoEntropy", []uint64{123}, crand.Reader},
 		{"WithEntropy", []uint64{123}, rng},
-		{"WithMonotonicEntropy_SameTimestamp_Inc0", []uint64{123}, ulid.Monotonic(rng, 0)},
-		{"WithMonotonicEntropy_DifferentTimestamp_Inc0", []uint64{122, 123}, ulid.Monotonic(rng, 0)},
-		{"WithMonotonicEntropy_SameTimestamp_Inc1", []uint64{123}, ulid.Monotonic(rng, 1)},
-		{"WithMonotonicEntropy_DifferentTimestamp_Inc1", []uint64{122, 123}, ulid.Monotonic(rng, 1)},
-		{"WithCryptoMonotonicEntropy_SameTimestamp_Inc1", []uint64{123}, ulid.Monotonic(crand.Reader, 1)},
-		{"WithCryptoMonotonicEntropy_DifferentTimestamp_Inc1", []uint64{122, 123}, ulid.Monotonic(crand.Reader, 1)},
+		{"WithMonotonicEntropy_SameTimestamp_Inc0", []uint64{123}, sulid.Monotonic(rng, 0)},
+		{"WithMonotonicEntropy_DifferentTimestamp_Inc0", []uint64{122, 123}, sulid.Monotonic(rng, 0)},
+		{"WithMonotonicEntropy_SameTimestamp_Inc1", []uint64{123}, sulid.Monotonic(rng, 1)},
+		{"WithMonotonicEntropy_DifferentTimestamp_Inc1", []uint64{122, 123}, sulid.Monotonic(rng, 1)},
+		{"WithCryptoMonotonicEntropy_SameTimestamp_Inc1", []uint64{123}, sulid.Monotonic(crand.Reader, 1)},
+		{"WithCryptoMonotonicEntropy_DifferentTimestamp_Inc1", []uint64{122, 123}, sulid.Monotonic(crand.Reader, 1)},
 		{"WithoutEntropy", []uint64{123}, nil},
 	} {
 		tc := tc
@@ -744,32 +743,32 @@ func benchmarkMakeULID(b *testing.B, f func(uint64, io.Reader)) {
 }
 
 func BenchmarkParse(b *testing.B) {
-	const s = "0000XSNJG0MQJHBF4QX1EFD6Y3"
+	const s = "0000XSNJG055WMAVS5Z8"
 	b.SetBytes(int64(len(s)))
 	for i := 0; i < b.N; i++ {
-		_, _ = ulid.Parse(s)
+		_, _ = sulid.Parse(s)
 	}
 }
 
 func BenchmarkParseStrict(b *testing.B) {
-	const s = "0000XSNJG0MQJHBF4QX1EFD6Y3"
+	const s = "0000XSNJG055WMAVS5Z8"
 	b.SetBytes(int64(len(s)))
 	for i := 0; i < b.N; i++ {
-		_, _ = ulid.ParseStrict(s)
+		_, _ = sulid.ParseStrict(s)
 	}
 }
 
 func BenchmarkMustParse(b *testing.B) {
-	const s = "0000XSNJG0MQJHBF4QX1EFD6Y3"
+	const s = "0000XSNJG055WMAVS5Z8"
 	b.SetBytes(int64(len(s)))
 	for i := 0; i < b.N; i++ {
-		_ = ulid.MustParse(s)
+		_ = sulid.MustParse(s)
 	}
 }
 
 func BenchmarkString(b *testing.B) {
 	entropy := rand.New(rand.NewSource(time.Now().UnixNano()))
-	id := ulid.MustNew(123456, entropy)
+	id := sulid.MustNew(123456, entropy)
 	b.SetBytes(int64(len(id)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -779,8 +778,8 @@ func BenchmarkString(b *testing.B) {
 
 func BenchmarkMarshal(b *testing.B) {
 	entropy := rand.New(rand.NewSource(time.Now().UnixNano()))
-	buf := make([]byte, ulid.EncodedSize)
-	id := ulid.MustNew(123456, entropy)
+	buf := make([]byte, sulid.EncodedSize)
+	id := sulid.MustNew(123456, entropy)
 
 	b.Run("Text", func(b *testing.B) {
 		b.SetBytes(int64(len(id)))
@@ -816,10 +815,10 @@ func BenchmarkMarshal(b *testing.B) {
 }
 
 func BenchmarkUnmarshal(b *testing.B) {
-	var id ulid.ULID
-	s := "0000XSNJG0MQJHBF4QX1EFD6Y3"
+	var id sulid.SULID
+	s := "0000XSNJG055WMAVS5Z8"
 	txt := []byte(s)
-	bin, _ := ulid.MustParse(s).MarshalBinary()
+	bin, _ := sulid.MustParse(s).MarshalBinary()
 
 	b.Run("Text", func(b *testing.B) {
 		b.SetBytes(int64(len(txt)))
@@ -842,7 +841,7 @@ func BenchmarkNow(b *testing.B) {
 	b.SetBytes(8)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = ulid.Now()
+		_ = sulid.Now()
 	}
 }
 
@@ -851,12 +850,12 @@ func BenchmarkTimestamp(b *testing.B) {
 	b.SetBytes(8)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = ulid.Timestamp(now)
+		_ = sulid.Timestamp(now)
 	}
 }
 
 func BenchmarkTime(b *testing.B) {
-	id := ulid.MustNew(123456789, nil)
+	id := sulid.MustNew(123456789, nil)
 	b.SetBytes(8)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -865,7 +864,7 @@ func BenchmarkTime(b *testing.B) {
 }
 
 func BenchmarkSetTime(b *testing.B) {
-	var id ulid.ULID
+	var id sulid.SULID
 	b.SetBytes(8)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -874,7 +873,7 @@ func BenchmarkSetTime(b *testing.B) {
 }
 
 func BenchmarkEntropy(b *testing.B) {
-	id := ulid.MustNew(0, strings.NewReader("ABCDEFGHIJKLMNOP"))
+	id := sulid.MustNew(0, strings.NewReader("ABCDEFGHIJKLMNOP"))
 	b.SetBytes(10)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -883,7 +882,7 @@ func BenchmarkEntropy(b *testing.B) {
 }
 
 func BenchmarkSetEntropy(b *testing.B) {
-	var id ulid.ULID
+	var id sulid.SULID
 	e := []byte("ABCDEFGHIJKLMNOP")
 	b.SetBytes(10)
 	b.ResetTimer()
@@ -893,7 +892,7 @@ func BenchmarkSetEntropy(b *testing.B) {
 }
 
 func BenchmarkCompare(b *testing.B) {
-	id, other := ulid.MustNew(12345, nil), ulid.MustNew(54321, nil)
+	id, other := sulid.MustNew(12345, nil), sulid.MustNew(54321, nil)
 	b.SetBytes(int64(len(id) * 2))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

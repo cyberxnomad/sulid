@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/oklog/ulid/v2"
 	getopt "github.com/pborman/getopt/v2"
+	"github.com/xray-bit/sulid"
 )
 
 const (
@@ -73,7 +73,7 @@ func generate(quick, zero bool) {
 		entropy = zeroReader{}
 	}
 
-	id, err := ulid.New(ulid.Timestamp(time.Now()), entropy)
+	id, err := sulid.New(sulid.Timestamp(time.Now()), entropy)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
@@ -83,13 +83,13 @@ func generate(quick, zero bool) {
 }
 
 func parse(s string, local bool, f func(time.Time) string) {
-	id, err := ulid.Parse(s)
+	id, err := sulid.Parse(s)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 
-	t := ulid.Time(id.Time())
+	t := sulid.Time(id.Time())
 	if !local {
 		t = t.UTC()
 	}

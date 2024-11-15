@@ -1,5 +1,5 @@
-module github.com/oklog/ulid/v2
+module github.com/xray-bit/sulid
 
-go 1.15
+go 1.23
 
 require github.com/pborman/getopt v0.0.0-20170112200414-7148bc3a4c30
