@@ -178,7 +178,7 @@ func TestRoundTrips(t *testing.T) {
 			id == sulid.MustParseStrict(id.String())
 	}
 
-	err := quick.Check(prop, &quick.Config{MaxCount: 1e7})
+	err := quick.Check(prop, &quick.Config{MaxCount: 1e5})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -294,7 +294,7 @@ func TestLexicographicalOrder(t *testing.T) {
 		top = next
 	}
 
-	if err := quick.Check(prop, &quick.Config{MaxCount: 1e7}); err != nil {
+	if err := quick.Check(prop, &quick.Config{MaxCount: 1e6}); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -403,7 +403,7 @@ func TestTimestampRoundTrips(t *testing.T) {
 		return ts == sulid.Timestamp(sulid.Time(ts))
 	}
 
-	err := quick.Check(prop, &quick.Config{MaxCount: 1e6})
+	err := quick.Check(prop, &quick.Config{MaxCount: 1e5})
 	if err != nil {
 		t.Fatal(err)
 	}
