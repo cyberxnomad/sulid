@@ -18,11 +18,12 @@ const (
 )
 
 var (
-	formatFlag string
-	localFlag  bool
-	quickFlag  bool
-	zeroFlag   bool
-	numberFlag uint
+	formatFlag  string
+	localFlag   bool
+	quickFlag   bool
+	zeroFlag    bool
+	monoticFlag bool
+	numberFlag  uint
 )
 
 func init() {
@@ -30,6 +31,7 @@ func init() {
 	flag.BoolVar(&localFlag, "l", false, "when parsing, show local time instead of UTC")
 	flag.BoolVar(&quickFlag, "q", false, "when generating, use non-crypto-grade entropy")
 	flag.BoolVar(&zeroFlag, "z", false, "when generating, fix entropy to all-zeroes")
+	flag.BoolVar(&monoticFlag, "m", true, "when generating, use monotonically increasing")
 	flag.UintVar(&numberFlag, "n", 1, "when generating, specify the quantity to be generated")
 }
 
@@ -54,13 +56,13 @@ func main() {
 
 	switch len(args) {
 	case 0:
-		generate(quickFlag, zeroFlag, numberFlag)
+		generate(quickFlag, zeroFlag, monoticFlag, numberFlag)
 	default:
 		parse(args[0], localFlag, formatFunc)
 	}
 }
 
-func generate(quick, zero bool, num uint) {
+func generate(quick, zero, mono bool, num uint) {
 	entropy := cryptorand.Reader
 	if quick {
 		seed := time.Now().UnixNano()
@@ -69,6 +71,10 @@ func generate(quick, zero bool, num uint) {
 	}
 	if zero {
 		entropy = zeroReader{}
+	}
+
+	if mono {
+		entropy = &sulid.LockedMonotonicReader{MonotonicReader: sulid.Monotonic(entropy, 0)}
 	}
 
 	for range num {
