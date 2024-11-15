@@ -22,6 +22,7 @@ var (
 	localFlag  bool
 	quickFlag  bool
 	zeroFlag   bool
+	numberFlag uint
 )
 
 func init() {
@@ -29,6 +30,7 @@ func init() {
 	flag.BoolVar(&localFlag, "l", false, "when parsing, show local time instead of UTC")
 	flag.BoolVar(&quickFlag, "q", false, "when generating, use non-crypto-grade entropy")
 	flag.BoolVar(&zeroFlag, "z", false, "when generating, fix entropy to all-zeroes")
+	flag.UintVar(&numberFlag, "n", 1, "when generating, specify the quantity to be generated")
 }
 
 func main() {
@@ -52,13 +54,13 @@ func main() {
 
 	switch len(args) {
 	case 0:
-		generate(quickFlag, zeroFlag)
+		generate(quickFlag, zeroFlag, numberFlag)
 	default:
 		parse(args[0], localFlag, formatFunc)
 	}
 }
 
-func generate(quick, zero bool) {
+func generate(quick, zero bool, num uint) {
 	entropy := cryptorand.Reader
 	if quick {
 		seed := time.Now().UnixNano()
@@ -69,13 +71,15 @@ func generate(quick, zero bool) {
 		entropy = zeroReader{}
 	}
 
-	id, err := sulid.New(sulid.Timestamp(time.Now()), entropy)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
+	for range num {
+		id, err := sulid.New(sulid.Timestamp(time.Now()), entropy)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
 
-	fmt.Fprintf(os.Stdout, "%s\n", id)
+		fmt.Fprintf(os.Stdout, "%s\n", id)
+	}
 }
 
 func parse(s string, local bool, f func(time.Time) string) {
