@@ -579,9 +579,9 @@ type LockedMonotonicReader struct {
 // MonotonicRead synchronizes calls to the wrapped MonotonicReader.
 func (r *LockedMonotonicReader) MonotonicRead(ms uint64, p []byte) (err error) {
 	r.mu.Lock()
-	err = r.MonotonicReader.MonotonicRead(ms, p)
-	r.mu.Unlock()
-	return err
+	defer r.mu.Unlock()
+
+	return r.MonotonicReader.MonotonicRead(ms, p)
 }
 
 // MonotonicEntropy is an opaque type that provides monotonic entropy.
@@ -609,11 +609,16 @@ func (m *MonotonicEntropy) MonotonicRead(ms uint64, entropy []byte) (err error) 
 // increment the previous entropy number with a random number
 // of up to m.inc (inclusive).
 func (m *MonotonicEntropy) increment() error {
-	if inc, err := m.random(); err != nil {
+	inc, err := m.random()
+	if err != nil {
 		return err
-	} else if m.entropy.Add(inc) {
+	}
+
+	overflowed := m.entropy.Add(inc)
+	if overflowed {
 		return ErrMonotonicOverflow
 	}
+
 	return nil
 }
 
