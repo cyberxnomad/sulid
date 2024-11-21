@@ -1,3 +1,3 @@
-module github.com/xray-bit/sulid
+module github.com/cyberxnomad/sulid
 
 go 1.23

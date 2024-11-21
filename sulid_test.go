@@ -27,7 +27,7 @@ import (
 	"testing/quick"
 	"time"
 
-	"github.com/xray-bit/sulid"
+	"github.com/cyberxnomad/sulid"
 )
 
 func ExampleSULID() {

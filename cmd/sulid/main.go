@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xray-bit/sulid"
+	"github.com/cyberxnomad/sulid"
 )
 
 const (

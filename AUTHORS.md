@@ -3,4 +3,4 @@ ulid:
 - Tomás Senart (@tsenart)
 
 sulid:
-- Frank @xray-bit
+- Frank @cyberxnomad
