@@ -48,7 +48,7 @@ The components are encoded as 16 octets. Each component is encoded with the Most
 This package requires Go modules.
 
 ```shell
-go get -u github.com/xray-bit/sulid
+go get -u github.com/cyberxnomad/sulid
 ```
 
 ## Specification
