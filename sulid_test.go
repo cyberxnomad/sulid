@@ -17,10 +17,11 @@ package sulid_test
 import (
 	"bytes"
 	crand "crypto/rand"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"math"
-	"math/rand"
+	mrand "math/rand/v2"
 	"strings"
 	"testing"
 	"testing/iotest"
@@ -30,11 +31,18 @@ import (
 	"github.com/cyberxnomad/sulid"
 )
 
+func newMathV2Rng(t time.Time) io.Reader {
+	seed := [32]byte{}
+	binary.LittleEndian.PutUint64(seed[24:], uint64(t.UnixNano()))
+
+	return mrand.NewChaCha8(seed)
+}
+
 func ExampleSULID() {
 	t := time.Unix(1000000, 0)
-	entropy := sulid.Monotonic(rand.New(rand.NewSource(t.UnixNano())), 0)
+	entropy := sulid.Monotonic(newMathV2Rng(t), 0)
 	fmt.Println(sulid.MustNew(sulid.Timestamp(t), entropy))
-	// Output: 0000XSNJG055WMAVS5Z8
+	// Output: 0000XSNJG05BSJZW5PA8
 }
 
 func TestNew(t *testing.T) {
@@ -419,9 +427,8 @@ func TestSULIDTime(t *testing.T) {
 		t.Errorf("got err %v, want %v", got, want)
 	}
 
-	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	for i := 0; i < 1e6; i++ {
-		ms := uint64(rng.Int63n(int64(maxTime)))
+	for range int(1e6) {
+		ms := uint64(mrand.Int64N(int64(maxTime)))
 
 		var id sulid.SULID
 		if err := id.SetTime(ms); err != nil {
@@ -588,13 +595,13 @@ func TestScan(t *testing.T) {
 }
 
 func TestMonotonic(t *testing.T) {
-	now := sulid.Now()
+	now := time.Now()
 	for _, e := range []struct {
 		name string
 		mk   func() io.Reader
 	}{
 		{"cryptorand", func() io.Reader { return crand.Reader }},
-		{"mathrand", func() io.Reader { return rand.New(rand.NewSource(int64(now))) }},
+		{"mathrand", func() io.Reader { return newMathV2Rng(now) }},
 	} {
 		for _, inc := range []uint32{
 			0,
@@ -655,7 +662,7 @@ func TestMonotonicSafe(t *testing.T) {
 	t.Parallel()
 
 	var (
-		rng  = rand.New(rand.NewSource(time.Now().UnixNano()))
+		rng  = newMathV2Rng(time.Now())
 		safe = &sulid.LockedMonotonicReader{MonotonicReader: sulid.Monotonic(rng, 0)}
 		t0   = sulid.Timestamp(time.Now())
 	)
@@ -689,7 +696,7 @@ func TestMonotonicSafe(t *testing.T) {
 
 func TestSULID_Bytes(t *testing.T) {
 	tt := time.Unix(1000000, 0)
-	entropy := sulid.Monotonic(rand.New(rand.NewSource(tt.UnixNano())), 0)
+	entropy := sulid.Monotonic(newMathV2Rng(tt), 0)
 	id := sulid.MustNew(sulid.Timestamp(tt), entropy)
 	bid := id.Bytes()
 	bid[len(bid)-1]++
@@ -714,7 +721,7 @@ func benchmarkMakeSULID(b *testing.B, f func(uint64, io.Reader)) {
 	b.ReportAllocs()
 	b.SetBytes(int64(len(sulid.SULID{})))
 
-	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	rng := newMathV2Rng(time.Now())
 
 	for _, tc := range []struct {
 		name       string
@@ -768,7 +775,7 @@ func BenchmarkMustParse(b *testing.B) {
 }
 
 func BenchmarkString(b *testing.B) {
-	entropy := rand.New(rand.NewSource(time.Now().UnixNano()))
+	entropy := newMathV2Rng(time.Now())
 	id := sulid.MustNew(123456, entropy)
 	b.SetBytes(int64(len(id)))
 	b.ResetTimer()
@@ -778,7 +785,7 @@ func BenchmarkString(b *testing.B) {
 }
 
 func BenchmarkMarshal(b *testing.B) {
-	entropy := rand.New(rand.NewSource(time.Now().UnixNano()))
+	entropy := newMathV2Rng(time.Now())
 	buf := make([]byte, sulid.EncodedSize)
 	id := sulid.MustNew(123456, entropy)
 

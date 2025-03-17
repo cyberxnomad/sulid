@@ -23,7 +23,7 @@ import (
 	"io"
 	"math"
 	"math/bits"
-	"math/rand"
+	"math/rand/v2"
 	"sync"
 	"time"
 )
@@ -132,7 +132,11 @@ func MustNewDefault(t time.Time) SULID {
 }
 
 var defaultEntropy = func() io.Reader {
-	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	seed := [32]byte{}
+	binary.LittleEndian.PutUint64(seed[24:], uint64(time.Now().UnixNano()))
+
+	rng := rand.NewChaCha8(seed)
+
 	return &LockedMonotonicReader{MonotonicReader: Monotonic(rng, 0)}
 }()
 

@@ -2,9 +2,10 @@ package main
 
 import (
 	cryptorand "crypto/rand"
+	"encoding/binary"
 	"flag"
 	"fmt"
-	mathrand "math/rand"
+	mathrand "math/rand/v2"
 	"os"
 	"strings"
 	"time"
@@ -18,8 +19,11 @@ const (
 )
 
 var (
-	formatFlag  string
-	localFlag   bool
+	// parse flags
+	formatFlag string
+	localFlag  bool
+
+	// generation flags
 	quickFlag   bool
 	zeroFlag    bool
 	monoticFlag bool
@@ -27,8 +31,11 @@ var (
 )
 
 func init() {
+	// parse flags
 	flag.StringVar(&formatFlag, "f", "default", "when parsing, show times in this format: default, rfc3339, unix, ms")
 	flag.BoolVar(&localFlag, "l", false, "when parsing, show local time instead of UTC")
+
+	// generation flags
 	flag.BoolVar(&quickFlag, "q", false, "when generating, use non-crypto-grade entropy")
 	flag.BoolVar(&zeroFlag, "z", false, "when generating, fix entropy to all-zeroes")
 	flag.BoolVar(&monoticFlag, "m", true, "when generating, use monotonically increasing")
@@ -65,9 +72,10 @@ func main() {
 func generate(quick, zero, mono bool, num uint) {
 	entropy := cryptorand.Reader
 	if quick {
-		seed := time.Now().UnixNano()
-		source := mathrand.NewSource(seed)
-		entropy = mathrand.New(source)
+		seed := [32]byte{}
+		binary.LittleEndian.PutUint64(seed[24:], uint64(time.Now().UnixNano()))
+
+		entropy = mathrand.NewChaCha8(seed)
 	}
 	if zero {
 		entropy = zeroReader{}
