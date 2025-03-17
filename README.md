@@ -29,7 +29,7 @@ The components are encoded as 16 octets. Each component is encoded with the Most
 
 ### Binary Layout and Byte Order of **SULID**
 
-The components are encoded as 16 octets. Each component is encoded with the Most Significant Byte first (network byte order).
+The components are encoded as 12 octets. Each component is encoded with the Most Significant Byte first (network byte order).
 
 ```
         0               1               2               3

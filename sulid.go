@@ -29,9 +29,9 @@ import (
 )
 
 /*
-A SULID is a 16 byte Universally Unique Lexicographically Sortable Identifier
+A SULID is a 12 byte Universally Unique Lexicographically Sortable Identifier
 
-	The components are encoded as 16 octets.
+	The components are encoded as 12 octets.
 	Each component is encoded with the MSB first (network byte order).
 
 	0                   1                   2                   3
@@ -40,8 +40,6 @@ A SULID is a 16 byte Universally Unique Lexicographically Sortable Identifier
 	|                      32_bit_uint_time_high                    |
 	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 	|     16_bit_uint_time_low      |       16_bit_uint_random      |
-	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	|                       32_bit_uint_random                      |
 	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 	|                       32_bit_uint_random                      |
 	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -278,7 +276,7 @@ func (id SULID) MarshalBinary() ([]byte, error) {
 }
 
 // MarshalBinaryTo writes the binary encoding of the SULID to the given buffer.
-// ErrBufferSize is returned when the len(dst) != 16.
+// ErrBufferSize is returned when the len(dst) != 12.
 func (id SULID) MarshalBinaryTo(dst []byte) error {
 	if len(dst) != len(id) {
 		return ErrBufferSize
