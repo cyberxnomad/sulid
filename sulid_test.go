@@ -141,7 +141,7 @@ func testSULID(mk func(uint64, io.Reader) sulid.SULID) func(*testing.T) {
 			t.Errorf("\ngot  %#v\nwant %#v", got, want)
 		}
 
-		entropy := bytes.Repeat([]byte{0xFF}, 16)
+		entropy := bytes.Repeat([]byte{0xFF}, 12)
 		copy(want[6:], entropy)
 		if got := mk(1e5, bytes.NewReader(entropy)); got != want {
 			t.Errorf("\ngot  %#v\nwant %#v", got, want)
@@ -241,7 +241,7 @@ func TestAlizainCompatibility(t *testing.T) {
 	t.Parallel()
 
 	ts := uint64(1469918176385)
-	got := sulid.MustNew(ts, bytes.NewReader(make([]byte, 16)))
+	got := sulid.MustNew(ts, bytes.NewReader(make([]byte, 12)))
 	want := sulid.MustParse("01ARYZ6S410000000000")
 	if got != want {
 		t.Fatalf("with time=%d, got %q, want %q", ts, got, want)
