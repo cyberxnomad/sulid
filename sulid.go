@@ -177,29 +177,49 @@ func parse(v []byte, strict bool, id *SULID) error {
 		return ErrDataSize
 	}
 
-	// Check if all the characters in a base32 encoded SULID are part of the
-	// expected base32 character set.
-	if strict &&
-		(dec[v[0]] == 0xFF ||
-			dec[v[1]] == 0xFF ||
-			dec[v[2]] == 0xFF ||
-			dec[v[3]] == 0xFF ||
-			dec[v[4]] == 0xFF ||
-			dec[v[5]] == 0xFF ||
-			dec[v[6]] == 0xFF ||
-			dec[v[7]] == 0xFF ||
-			dec[v[8]] == 0xFF ||
-			dec[v[9]] == 0xFF ||
-			dec[v[10]] == 0xFF ||
-			dec[v[11]] == 0xFF ||
-			dec[v[12]] == 0xFF ||
-			dec[v[13]] == 0xFF ||
-			dec[v[14]] == 0xFF ||
-			dec[v[15]] == 0xFF ||
-			dec[v[16]] == 0xFF ||
-			dec[v[17]] == 0xFF ||
-			dec[v[18]] == 0xFF ||
-			dec[v[19]] == 0xFF) {
+	// Use an optimized unrolled loop to decode a base32 ULID.
+	// The MSB(Most Significant Bit) is reserved for detecting invalid indexes.
+	//
+	// For example, in normal case, the bit layout of uint64(dec[v[0]])<<45 becomes:
+	//
+	//     | 63 | 62 | 61 | 60 | 59 | 58 | 57 | 56 | 55 | 54 | 53 | 52 | 51 | 50 | 49 | 48 | 47 | 46 | 45 | 44 | ... |
+	//     |----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|-----|
+	//     |  0 |  0 |  0 |  0 |  0 |  0 |  0 |  0 |  0 |  0 |  0 |  0 |  0 |  0 |  x |  x |  x |  x |  x |  0 | ... |
+	//
+	// and the MSB is set to 0.
+	//
+	// If the character is not part of the base32 character set, the layout becomes:
+	//
+	//     | 63 | 62 | 61 | 60 | 59 | 58 | 57 | 56 | 55 | 54 | 53 | 52 | 51 | 50 | 49 | 48 | 47 | 46 | 45 | 44 | ... |
+	//     |----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|-----|
+	//     |  1 |  1 |  1 |  1 |  1 |  1 |  1 |  1 |  1 |  1 |  1 |  1 |  1 |  1 |  1 |  1 |  1 |  1 |  1 |  0 | ... |
+	//
+	// and the MSB is set to 1.
+	//
+	// Reference: https://github.com/oklog/ulid/pull/116
+	// Original: @shogo82148
+	h := uint64(dec[v[0]])<<45 |
+		uint64(dec[v[1]])<<40 |
+		uint64(dec[v[2]])<<35 |
+		uint64(dec[v[3]])<<30 |
+		uint64(dec[v[4]])<<25 |
+		uint64(dec[v[5]])<<20 |
+		uint64(dec[v[6]])<<15 |
+		uint64(dec[v[7]])<<10 |
+		uint64(dec[v[8]])<<5 |
+		uint64(dec[v[9]])
+
+	l := uint64(dec[v[10]])<<45 |
+		uint64(dec[v[11]])<<40 |
+		uint64(dec[v[12]])<<35 |
+		uint64(dec[v[13]])<<30 |
+		uint64(dec[v[14]])<<25 |
+		uint64(dec[v[15]])<<20 |
+		uint64(dec[v[16]])<<15 |
+		uint64(dec[v[17]])<<10 |
+		uint64(dec[v[18]])<<5 |
+		uint64(dec[v[19]])
+	if strict && (h|l)&(1<<63) != 0 {
 		return ErrInvalidCharacters
 	}
 
@@ -216,20 +236,20 @@ func parse(v []byte, strict bool, id *SULID) error {
 	// to decode a base32 SULID.
 
 	// 6 bytes timestamp (48 bits)
-	(*id)[0] = (dec[v[0]] << 5) | dec[v[1]]
-	(*id)[1] = (dec[v[2]] << 3) | (dec[v[3]] >> 2)
-	(*id)[2] = (dec[v[3]] << 6) | (dec[v[4]] << 1) | (dec[v[5]] >> 4)
-	(*id)[3] = (dec[v[5]] << 4) | (dec[v[6]] >> 1)
-	(*id)[4] = (dec[v[6]] << 7) | (dec[v[7]] << 2) | (dec[v[8]] >> 3)
-	(*id)[5] = (dec[v[8]] << 5) | dec[v[9]]
+	(*id)[0] = byte(h >> 40)
+	(*id)[1] = byte(h >> 32)
+	(*id)[2] = byte(h >> 24)
+	(*id)[3] = byte(h >> 16)
+	(*id)[4] = byte(h >> 8)
+	(*id)[5] = byte(h)
 
 	// 6 bytes of entropy (48 bits)
-	(*id)[6] = (dec[v[10]] << 5) | dec[v[11]]
-	(*id)[7] = (dec[v[12]] << 3) | (dec[v[13]] >> 2)
-	(*id)[8] = (dec[v[13]] << 6) | (dec[v[14]] << 1) | (dec[v[15]] >> 4)
-	(*id)[9] = (dec[v[15]] << 4) | (dec[v[16]] >> 1)
-	(*id)[10] = (dec[v[16]] << 7) | (dec[v[17]] << 2) | (dec[v[18]] >> 3)
-	(*id)[11] = (dec[v[18]] << 5) | dec[v[19]]
+	(*id)[6] = byte(l >> 40)
+	(*id)[7] = byte(l >> 32)
+	(*id)[8] = byte(l >> 24)
+	(*id)[9] = byte(l >> 16)
+	(*id)[10] = byte(l >> 8)
+	(*id)[11] = byte(l)
 
 	return nil
 }
@@ -346,34 +366,39 @@ func (id SULID) MarshalTextTo(dst []byte) error {
 }
 
 // Byte to index table for O(1) lookups when unmarshaling.
-// We use 0xFF as sentinel value for invalid indexes.
-var dec = [...]byte{
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x01,
-	0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E,
-	0x0F, 0x10, 0x11, 0xFF, 0x12, 0x13, 0xFF, 0x14, 0x15, 0xFF,
-	0x16, 0x17, 0x18, 0x19, 0x1A, 0xFF, 0x1B, 0x1C, 0x1D, 0x1E,
-	0x1F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x0A, 0x0B, 0x0C,
-	0x0D, 0x0E, 0x0F, 0x10, 0x11, 0xFF, 0x12, 0x13, 0xFF, 0x14,
-	0x15, 0xFF, 0x16, 0x17, 0x18, 0x19, 0x1A, 0xFF, 0x1B, 0x1C,
-	0x1D, 0x1E, 0x1F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+// We use -1 (all bits are set to 1) as sentinel value for invalid indexes.
+// The reason for using -1 is that, even when cast, it does not lose the property that all bits are set to 1.
+// e.g. uint64(int8(-1)) == 0xFFFFFFFFFFFFFFFF
+//
+// Reference: https://github.com/oklog/ulid/pull/116
+// Original: @shogo82148
+var dec = [...]int8{
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, 0x00, 0x01,
+	0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, -1, -1,
+	-1, -1, -1, -1, -1, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E,
+	0x0F, 0x10, 0x11, -1, 0x12, 0x13, -1, 0x14, 0x15, -1,
+	0x16, 0x17, 0x18, 0x19, 0x1A, -1, 0x1B, 0x1C, 0x1D, 0x1E,
+	0x1F, -1, -1, -1, -1, -1, -1, 0x0A, 0x0B, 0x0C,
+	0x0D, 0x0E, 0x0F, 0x10, 0x11, -1, 0x12, 0x13, -1, 0x14,
+	0x15, -1, 0x16, 0x17, 0x18, 0x19, 0x1A, -1, 0x1B, 0x1C,
+	0x1D, 0x1E, 0x1F, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1,
 }
 
 // EncodedSize is the length of a text encoded SULID.
