@@ -603,14 +603,8 @@ func Monotonic(entropy io.Reader, inc uint32) *MonotonicEntropy {
 		m.inc = math.MaxUint16
 	}
 
-	if rng, ok := entropy.(rng); ok {
-		m.rng = rng
-	}
-
 	return &m
 }
-
-type rng interface{ Int31n(n int32) int32 }
 
 // LockedMonotonicReader wraps a MonotonicReader with a sync.Mutex for safe
 // concurrent use.
@@ -634,7 +628,6 @@ type MonotonicEntropy struct {
 	inc     uint32
 	entropy uint48
 	rand    [4]byte
-	rng     rng
 }
 
 // MonotonicRead implements the MonotonicReader interface.
@@ -671,12 +664,6 @@ func (m *MonotonicEntropy) increment() error {
 func (m *MonotonicEntropy) random() (inc uint32, err error) {
 	if m.inc <= 1 {
 		return 1, nil
-	}
-
-	// Fast path for using a underlying rand.Rand directly.
-	if m.rng != nil {
-		// Range: [1, m.inc)
-		return 1 + uint32(m.rng.Int31n(int32(m.inc))), nil
 	}
 
 	// bitLen is the maximum bit length needed to encode a value < m.inc.
